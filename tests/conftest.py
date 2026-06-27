@@ -20,6 +20,11 @@ class FakeWebSocket:
         with self._lock:
             self._inbox.append(json.dumps({"type": msg_type, "data": data}))
 
+    def inject_raw(self, obj: dict) -> None:
+        """Inject an arbitrary frame (e.g. flash_done with success/error)."""
+        with self._lock:
+            self._inbox.append(json.dumps(obj))
+
     def send(self, data: str) -> None:
         self._sent.append(data)
 

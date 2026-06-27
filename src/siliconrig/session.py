@@ -1,6 +1,5 @@
 """Hardware session wrapper."""
 
-import time
 from pathlib import Path
 from typing import Any
 
@@ -8,8 +7,8 @@ import httpx
 
 from siliconrig.exceptions import FlashError, SessionError
 from siliconrig.serial import Serial
+from siliconrig.exceptions import SerialTimeout
 
-_FLASH_POLL_INTERVAL = 0.1
 _FLASH_DEFAULT_TIMEOUT = 120.0
 
 
@@ -60,6 +59,12 @@ class Session:
         if not path.exists():
             raise FileNotFoundError(f"Firmware not found: {path}")
 
+        # Arm flash-completion tracking on the serial WS *before* uploading, so
+        # we can't miss a fast flash_done. Flashing is async: the coordinator
+        # ACKs the upload immediately and the pod signals real completion with a
+        # flash_done frame on the serial connection (same as the Go CLI does).
+        self.serial.arm_flash()
+
         with open(path, "rb") as f:
             resp = self._http.post(
                 f"/v1/sessions/{self.id}/flash",
@@ -74,7 +79,16 @@ class Session:
                 detail = resp.text
             raise FlashError(f"Flash upload failed: {detail}")
 
-        self._wait_flash(timeout)
+        try:
+            success, err = self.serial.wait_flash(timeout)
+        except SerialTimeout as exc:
+            raise FlashError(str(exc)) from exc
+        if not success:
+            raise FlashError(f"Flash failed: {err or 'unknown'}")
+
+        # Discard any pre-flash / flashing-noise bytes so the next read/expect
+        # sees only output from the freshly-flashed firmware's boot.
+        self.serial.flush()
 
     # -- power ----------------------------------------------------------------
 
@@ -106,18 +120,3 @@ class Session:
             self._http.delete(f"/v1/sessions/{self.id}")
         except Exception:
             pass
-
-    # -- internal -------------------------------------------------------------
-
-    def _wait_flash(self, timeout: float) -> None:
-        """Poll session info until the board is done flashing."""
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            data = self.info()
-            state = data.get("state", "")
-            if state in ("idle", "active"):
-                return
-            if state in ("error", "ended"):
-                raise FlashError(f"Flash failed: {data.get('end_reason', 'unknown')}")
-            time.sleep(_FLASH_POLL_INTERVAL)
-        raise FlashError(f"Flash did not complete within {timeout}s")

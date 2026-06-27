@@ -27,17 +27,48 @@ class Serial:
         self._closed = False
         self._error: Exception | None = None
 
+        # Flash completion is signalled by a ``flash_done`` frame on this same
+        # serial WebSocket (the coordinator forwards it from the pod). We latch
+        # it here so Session.flash() can wait for the real completion instead of
+        # polling session state (which is already "active" and returns instantly).
+        self._flash_event = threading.Event()
+        self._flash_result: tuple[bool, str] | None = None
+
         headers = {"X-API-Key": api_key}
         self._ws = ws_sync.connect(ws_url, additional_headers=headers)
 
         self._reader = threading.Thread(target=self._read_loop, daemon=True)
         self._reader.start()
 
+    # -- flash completion -----------------------------------------------------
+
+    def arm_flash(self) -> None:
+        """Reset flash-completion state; call immediately before uploading."""
+        self._flash_result = None
+        self._flash_event.clear()
+
+    def wait_flash(self, timeout: float) -> tuple[bool, str]:
+        """Block until a ``flash_done`` frame arrives on the serial WS.
+
+        Returns ``(success, error_message)``. Raises :class:`SerialTimeout` if
+        no ``flash_done`` is received within *timeout* seconds.
+        """
+        if not self._flash_event.wait(timeout):
+            extra = ""
+            if self._error is not None:
+                extra = f" (reader thread died: {self._error})"
+            raise SerialTimeout(
+                f"flash did not complete within {timeout}s "
+                f"(no flash_done received).{extra}"
+            )
+        return self._flash_result or (False, "no flash result")
+
     # -- write ----------------------------------------------------------------
 
     def send(self, data: str) -> None:
         """Send a string to the board's UART."""
-        msg = json.dumps({"type": "serial_data", "data": data})
+        b64 = base64.b64encode(data.encode("utf-8")).decode("ascii")
+        msg = json.dumps({"type": "serial_data", "data": b64})
         self._ws.send(msg)
 
     # -- read -----------------------------------------------------------------
@@ -128,7 +159,8 @@ class Serial:
                     msg = json.loads(raw)
                 except (json.JSONDecodeError, TypeError):
                     continue
-                if msg.get("type") == "serial_data":
+                mtype = msg.get("type")
+                if mtype == "serial_data":
                     raw_data = msg.get("data", "")
                     try:
                         text = base64.b64decode(raw_data).decode("utf-8", errors="replace")
@@ -136,6 +168,12 @@ class Serial:
                         text = raw_data
                     with self._lock:
                         self._buf.append(text)
+                elif mtype == "flash_done":
+                    self._flash_result = (
+                        bool(msg.get("success", False)),
+                        str(msg.get("error", "") or ""),
+                    )
+                    self._flash_event.set()
         except Exception as exc:
             if not self._closed:
                 self._error = exc
