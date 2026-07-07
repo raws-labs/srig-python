@@ -66,7 +66,7 @@ class Client:
         The session is automatically ended when the block exits.
 
         Args:
-            board: Board type identifier (e.g. ``"esp32s3"``).
+            board: Board type identifier (e.g. ``"esp32-s3"``).
             base_image_id: Optional base image to pre-flash.
         """
         body: dict[str, Any] = {"board_type": board}

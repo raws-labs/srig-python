@@ -14,7 +14,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--siliconrig-board",
         dest="siliconrig_board",
         default=None,
-        help="Board type to use for siliconrig sessions (e.g. esp32s3).",
+        help="Board type to use for siliconrig sessions (e.g. esp32-s3).",
     )
     group.addoption(
         "--siliconrig-firmware",
@@ -42,7 +42,7 @@ def siliconrig_board(request: pytest.FixtureRequest):
 
     Configure via CLI options or environment variables::
 
-        pytest --siliconrig-board esp32s3 --siliconrig-firmware build/app.bin
+        pytest --siliconrig-board esp32-s3 --siliconrig-firmware build/app.bin
 
     Or use the ``Board`` class directly in your own fixtures for more control.
     """

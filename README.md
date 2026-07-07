@@ -1,6 +1,6 @@
 # siliconrig
 
-Python SDK for [siliconrig](https://siliconrig.dev) — remote access to MCU development boards.
+Python SDK for [siliconrig](https://siliconrig.dev) — remote access to real embedded boards.
 
 Use it in scripts, automation, or as a pytest plugin for hardware-in-the-loop testing.
 
@@ -17,7 +17,7 @@ from siliconrig import Client
 
 client = Client()
 
-with client.session(board="esp32s3") as session:
+with client.session(board="esp32-s3") as session:
     session.flash("firmware.bin")
     session.serial.expect("Ready", timeout=10)
     session.serial.send("status\n")
@@ -55,7 +55,7 @@ def test_boot_ok(board):
 Or use the built-in `siliconrig_board` fixture via CLI options:
 
 ```bash
-pytest --siliconrig-board esp32s3 --siliconrig-firmware build/app.bin tests/hil/
+pytest --siliconrig-board esp32-s3 --siliconrig-firmware build/app.bin tests/hil/
 ```
 
 ## Authentication

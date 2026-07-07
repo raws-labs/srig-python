@@ -17,7 +17,7 @@ class TestBoardContextManager:
         mock_ctx.__exit__ = MagicMock(return_value=False)
         mock_client.session.return_value = mock_ctx
 
-        with Board("esp32s3", firmware="app.bin", api_key="sk_test") as b:
+        with Board("esp32-s3", firmware="app.bin", api_key="sk_test") as b:
             assert b.session is mock_session
             mock_session.flash.assert_called_once_with("app.bin")
 
@@ -32,7 +32,7 @@ class TestBoardContextManager:
         mock_ctx.__exit__ = MagicMock(return_value=False)
         mock_client.session.return_value = mock_ctx
 
-        with Board("esp32s3", api_key="sk_test") as b:
+        with Board("esp32-s3", api_key="sk_test") as b:
             pass
 
         mock_session.flash.assert_not_called()
@@ -48,7 +48,7 @@ class TestBoardProxies:
         mock_ctx.__exit__ = MagicMock(return_value=False)
         mock_client.session.return_value = mock_ctx
 
-        with Board("esp32s3", api_key="sk_test") as b:
+        with Board("esp32-s3", api_key="sk_test") as b:
             b.send("test\n")
             mock_session.serial.send.assert_called_with("test\n")
 
