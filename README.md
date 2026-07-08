@@ -35,6 +35,17 @@ with Board("esp32-s3", firmware="build/app.bin") as board:
     board.expect("GPIO4=HIGH", timeout=2)
 ```
 
+## Firmware formats
+
+`flash()` accepts a raw `.bin` (all boards), a `.uf2` (rp2350), or — for STM32
+boards — an `.elf` or Intel `.hex`, which siliconrig converts to a raw image
+server-side before flashing. Hand it your build's ELF directly:
+
+```python
+with Board("stm32-h753", firmware="build/firmware.elf") as board:
+    board.expect("All tests passed", timeout=30)
+```
+
 ## pytest plugin
 
 The package includes a pytest plugin that registers automatically. Use it with custom fixtures:
