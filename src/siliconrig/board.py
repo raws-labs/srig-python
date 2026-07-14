@@ -90,7 +90,7 @@ class Board:
 
     # -- proxied session methods ----------------------------------------------
 
-    def flash(self, firmware: str | Path, timeout: float = 120.0) -> None:
+    def flash(self, firmware: str | Path, timeout: float = 300.0) -> None:
         """Flash firmware to the board."""
         assert self._session is not None
         self._session.flash(firmware, timeout=timeout)

@@ -9,7 +9,10 @@ from siliconrig.exceptions import FlashError, SessionError
 from siliconrig.serial import Serial
 from siliconrig.exceptions import SerialTimeout
 
-_FLASH_DEFAULT_TIMEOUT = 120.0
+# Large firmware (multi-MB ML model/plan partitions) can take a couple of
+# minutes to flash on real hardware; keep the default generous. A stuck flash is
+# still bounded server-side, so a failed flash returns well before this.
+_FLASH_DEFAULT_TIMEOUT = 300.0
 
 
 class Session:
