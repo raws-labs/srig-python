@@ -35,7 +35,7 @@ dev = [
 [project.urls]
 Homepage = "https://siliconrig.dev"
 Documentation = "https://siliconrig.dev/docs/guides/python-sdk"
-Repository = "https://github.com/siliconrig/srig-python"
+Repository = "https://github.com/raws-labs/srig-python"
 
 [project.entry-points.pytest11]
 siliconrig = "siliconrig.plugin"
