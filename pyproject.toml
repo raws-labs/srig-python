@@ -9,7 +9,7 @@ description = "Python SDK and pytest fixtures for siliconrig hardware-in-the-loo
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-authors = [{ name = "RAWS Consulting" }]
+authors = [{ name = "RAWS Labs" }]
 keywords = ["embedded", "testing", "hardware-in-the-loop", "HIL", "pytest", "MCU"]
 classifiers = [
     "Development Status :: 3 - Alpha",
