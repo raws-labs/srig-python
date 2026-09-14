@@ -1,6 +1,6 @@
 # siliconrig
 
-Python SDK for [siliconrig](https://siliconrig.dev) — remote access to real embedded boards.
+Python SDK for [SiliconRig](https://siliconrig.dev): remote access to real embedded boards.
 
 Use it in scripts, automation, or as a pytest plugin for hardware-in-the-loop testing.
 
@@ -37,8 +37,8 @@ with Board("esp32-s3", firmware="build/app.bin") as board:
 
 ## Firmware formats
 
-`flash()` accepts a raw `.bin` (all boards), a `.uf2` (rp2350), or — for STM32
-boards — an `.elf` or Intel `.hex`, which siliconrig converts to a raw image
+`flash()` accepts a raw `.bin` (all boards), a `.uf2` (rp2350), or, for STM32
+boards, an `.elf` or Intel `.hex`, which SiliconRig converts to a raw image
 server-side before flashing. Hand it your build's ELF directly:
 
 ```python
