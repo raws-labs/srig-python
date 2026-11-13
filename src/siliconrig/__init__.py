@@ -1,21 +1,21 @@
 """siliconrig — Python SDK for hardware-in-the-loop testing."""
 
-from siliconrig.client import Client
 from siliconrig.board import Board
+from siliconrig.client import Client
 from siliconrig.exceptions import (
-    SiliconrigError,
     AuthError,
-    SessionError,
     FlashError,
     SerialTimeout,
+    SessionError,
+    SiliconrigError,
 )
 
 __all__ = [
-    "Client",
-    "Board",
-    "SiliconrigError",
     "AuthError",
-    "SessionError",
+    "Board",
+    "Client",
     "FlashError",
     "SerialTimeout",
+    "SessionError",
+    "SiliconrigError",
 ]

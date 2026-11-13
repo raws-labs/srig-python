@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from siliconrig.board import Board
 
 
@@ -32,7 +30,7 @@ class TestBoardContextManager:
         mock_ctx.__exit__ = MagicMock(return_value=False)
         mock_client.session.return_value = mock_ctx
 
-        with Board("esp32-s3", api_key="sk_test") as b:
+        with Board("esp32-s3", api_key="sk_test"):
             pass
 
         mock_session.flash.assert_not_called()

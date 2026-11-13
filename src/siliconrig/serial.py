@@ -33,9 +33,16 @@ class Serial:
         # polling session state (which is already "active" and returns instantly).
         self._flash_event = threading.Event()
         self._flash_result: tuple[bool, str] | None = None
+        # Output from before a flash's first ``flash_output`` line is the old
+        # firmware's and is dropped; the pod forwards nothing from the old
+        # firmware after that line, so everything later is the new one's boot.
+        self._flash_armed = False
+        self._flash_started = False
 
         headers = {"X-API-Key": api_key}
-        self._ws = ws_sync.connect(ws_url, additional_headers=headers)
+        self._ws = ws_sync.connect(
+            ws_url, additional_headers=headers, close_timeout=_WS_CLOSE_TIMEOUT
+        )
 
         self._reader = threading.Thread(target=self._read_loop, daemon=True)
         self._reader.start()
@@ -46,6 +53,16 @@ class Serial:
         """Reset flash-completion state; call immediately before uploading."""
         self._flash_result = None
         self._flash_event.clear()
+        with self._lock:
+            self._flash_armed = True
+            self._flash_started = False
+
+    def _drop_old_output(self) -> None:
+        """Discard the old firmware's output once, at the boundary of an armed flash."""
+        with self._lock:
+            if self._flash_armed and not self._flash_started:
+                self._buf.clear()
+                self._flash_started = True
 
     def wait_flash(self, timeout: float) -> tuple[bool, str]:
         """Block until a ``flash_done`` frame arrives on the serial WS.
@@ -142,10 +159,7 @@ class Serial:
     def close(self) -> None:
         """Disconnect the WebSocket."""
         self._closed = True
-        try:
-            self._ws.close(timeout=_WS_CLOSE_TIMEOUT)
-        except Exception:
-            pass
+        self._ws.close()
 
     # -- internal -------------------------------------------------------------
 
@@ -159,21 +173,29 @@ class Serial:
                     msg = json.loads(raw)
                 except (json.JSONDecodeError, TypeError):
                     continue
+                if not isinstance(msg, dict):
+                    continue
                 mtype = msg.get("type")
                 if mtype == "serial_data":
                     raw_data = msg.get("data", "")
                     try:
                         text = base64.b64decode(raw_data).decode("utf-8", errors="replace")
-                    except Exception:
+                    except (ValueError, TypeError):
                         text = raw_data
                     with self._lock:
                         self._buf.append(text)
+                elif mtype == "flash_output":
+                    self._drop_old_output()
                 elif mtype == "flash_done":
+                    # A pod that sent no flash_output: the boundary is flash_done.
+                    self._drop_old_output()
+                    with self._lock:
+                        self._flash_armed = False
                     self._flash_result = (
                         bool(msg.get("success", False)),
                         str(msg.get("error", "") or ""),
                     )
                     self._flash_event.set()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - surfaced to the caller as "reader thread died"
             if not self._closed:
                 self._error = exc
