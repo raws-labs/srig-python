@@ -101,7 +101,7 @@ def _check(resp: httpx.Response) -> None:
         return
     try:
         detail = resp.json().get("error", resp.text)
-    except Exception:
+    except (ValueError, AttributeError):
         detail = resp.text
     if resp.status_code in (401, 403):
         raise AuthError(detail)

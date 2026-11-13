@@ -2,7 +2,7 @@
 
 import json
 import threading
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -28,7 +28,7 @@ class FakeWebSocket:
     def send(self, data: str) -> None:
         self._sent.append(data)
 
-    def close(self, timeout: float = 3) -> None:
+    def close(self, code: int = 1000, reason: str = "") -> None:
         self._closed = True
 
     def __iter__(self):

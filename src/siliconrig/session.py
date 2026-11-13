@@ -5,9 +5,8 @@ from typing import Any
 
 import httpx
 
-from siliconrig.exceptions import FlashError, SessionError
+from siliconrig.exceptions import FlashError, SerialTimeout, SessionError
 from siliconrig.serial import Serial
-from siliconrig.exceptions import SerialTimeout
 
 # Large firmware (multi-MB ML model/plan partitions) can take a couple of
 # minutes to flash on real hardware; keep the default generous. A stuck flash is
@@ -78,7 +77,7 @@ class Session:
         if not resp.is_success:
             try:
                 detail = resp.json().get("error", resp.text)
-            except Exception:
+            except (ValueError, AttributeError):
                 detail = resp.text
             raise FlashError(f"Flash upload failed: {detail}")
 
@@ -88,10 +87,8 @@ class Session:
             raise FlashError(str(exc)) from exc
         if not success:
             raise FlashError(f"Flash failed: {err or 'unknown'}")
-
-        # Discard any pre-flash / flashing-noise bytes so the next read/expect
-        # sees only output from the freshly-flashed firmware's boot.
-        self.serial.flush()
+        # The serial buffer now holds only the new firmware's output, including
+        # boot output that arrived before flash_done (see Serial.arm_flash).
 
     # -- power ----------------------------------------------------------------
 
@@ -118,8 +115,10 @@ class Session:
         if self._closed:
             return
         self._closed = True
-        self.serial.close()
         try:
-            self._http.delete(f"/v1/sessions/{self.id}")
-        except Exception:
-            pass
+            self.serial.close()
+        finally:
+            try:
+                self._http.delete(f"/v1/sessions/{self.id}")
+            except httpx.HTTPError:
+                pass  # the coordinator ends an unattended session on its own

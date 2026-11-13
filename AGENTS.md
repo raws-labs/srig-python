@@ -21,7 +21,7 @@ Python SDK and pytest plugin for SiliconRig: open a session on a remote board, f
 - Exceptions derive from `SiliconrigError`: `AuthError` (401/403), `SessionError`, `FlashError`, `SerialTimeout`.
 
 ## Gotchas
-- Flash completion is signaled by a `flash_done` frame on the serial WebSocket, not by session state. `Session` opens the serial socket eagerly, which already marks the session active, so polling state returns before the hardware has finished flashing. `flash()` therefore calls `Serial.arm_flash()` before the upload, waits for the frame, then `flush()`es pre-flash noise; keep that order.
+- Flash completion is signaled by a `flash_done` frame on the serial WebSocket, not by session state. `Session` opens the serial socket eagerly, which already marks the session active, so polling state returns before the hardware has finished flashing. `flash()` therefore calls `Serial.arm_flash()` before the upload and then waits for the frame. After arming, the buffer is cleared once at the flash's first `flash_output` frame (or at `flash_done` if none came): earlier output is the old firmware's, later output is the new firmware's boot and is kept even when it arrives before `flash_done`.
 - Serial frames are JSON `{"type": "serial_data", "data": <base64>}` in both directions. `read_until` returns through the match and pushes the remainder back into the buffer.
 - Default flash timeout is 300 s because multi-MB images take minutes on real hardware; the server bounds a stuck flash earlier than that.
 

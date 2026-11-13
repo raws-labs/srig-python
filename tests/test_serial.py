@@ -68,6 +68,13 @@ class TestExpect:
         assert "ready" in result
 
 
+class TestClose:
+    def test_closes_websocket(self, serial_conn):
+        serial, ws = serial_conn
+        serial.close()
+        assert ws._closed
+
+
 class TestFlush:
     def test_clears_buffer(self, serial_conn):
         serial, ws = serial_conn
@@ -112,6 +119,33 @@ class TestWaitFlash:
         ws.inject("serial_data", "boot banner ready\n")  # post-flash boot output
         time.sleep(0.15)
         assert "boot banner ready" in serial.read(timeout=1)
+
+    def test_keeps_boot_output_after_first_flash_output(self, serial_conn):
+        serial, ws = serial_conn
+        ws.inject("serial_data", "old firmware DONE\n")
+        time.sleep(0.1)
+        serial.arm_flash()
+        ws.inject("serial_data", "old firmware still running\n")
+        ws.inject_raw({"type": "flash_output", "line": "st-flash 1.9.0"})
+        ws.inject("serial_data", "boot banner\n")
+        ws.inject_raw({"type": "flash_output", "line": "Flash written and verified!"})
+        ws.inject_raw({"type": "flash_done", "success": True, "error": ""})
+        serial.wait_flash(timeout=2)
+        out = serial.read(timeout=1)
+        assert "boot banner" in out
+        assert "old firmware" not in out
+
+    def test_drops_old_output_without_flash_output(self, serial_conn):
+        serial, ws = serial_conn
+        serial.arm_flash()
+        ws.inject("serial_data", "old firmware\n")
+        ws.inject_raw({"type": "flash_done", "success": True, "error": ""})
+        serial.wait_flash(timeout=2)
+        ws.inject("serial_data", "boot banner\n")
+        time.sleep(0.15)
+        out = serial.read(timeout=1)
+        assert "boot banner" in out
+        assert "old firmware" not in out
 
     def test_arm_flash_resets_previous_result(self, serial_conn):
         serial, ws = serial_conn
